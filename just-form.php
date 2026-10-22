@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Just Form
  * Description: Форма обратной связи для Gutenberg с многоуровневой защитой от спама и SMTP
- * Version: 1.0.0
+ * Version: 1.0.1
  * Requires at least: 6.1
  * Requires PHP: 7.4
  * Text Domain: just-form
@@ -10,7 +10,7 @@
 
 defined('ABSPATH') || exit;
 
-define('JF_VERSION', '1.0.0');
+define('JF_VERSION', '1.0.1');
 define('JF_DIR', plugin_dir_path(__FILE__));
 define('JF_URL', plugin_dir_url(__FILE__));
 

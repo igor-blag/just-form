@@ -44,10 +44,15 @@ class Block
     {
         $privacy_url    = !empty($attributes['privacyUrl']) ? esc_url($attributes['privacyUrl']) : '';
         $button_text    = !empty($attributes['buttonText']) ? esc_html($attributes['buttonText']) : 'Отправить';
-        $recipient      = !empty($attributes['recipientEmail']) ? $attributes['recipientEmail'] : get_option('admin_email');
+        $recipient = !empty($attributes['recipientEmail'])
+            ? sanitize_email($attributes['recipientEmail'])
+            : '';
+        if (!is_email($recipient)) {
+            $recipient = get_option('admin_email');
+        }
 
         $spam = new SpamProtection();
-        $token = $spam->generate_token();
+        $token = $spam->generate_token($recipient);
 
         $html = '<form class="jf-form" novalidate>';
 
@@ -55,8 +60,8 @@ class Block
         $html .= '<input type="hidden" name="jf-recipient" value="' . esc_attr($recipient) . '">';
 
         $html .= '<div class="jf-field">
-            <label for="jf-name">Имя</label>
-            <input type="text" id="jf-name" name="jf-name" required minlength="2" placeholder="Ваше имя">
+            <label for="jf-name">Имя (необязательно)</label>
+            <input type="text" id="jf-name" name="jf-name" minlength="2" placeholder="Ваше имя">
         </div>';
 
         $html .= '<div class="jf-field">

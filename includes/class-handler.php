@@ -14,31 +14,24 @@ class Handler
     {
         $spam = new SpamProtection();
 
-        if (!$spam->verify_nonce($_POST['jf_nonce'] ?? '')) {
+        if (!$spam->verify_nonce($this->post_string('jf_nonce'))) {
             wp_send_json_error(['message' => 'Ошибка безопасности. Обновите страницу.']);
         }
 
-        $token     = $_POST['jf-token'] ?? '';
-        $load_time = $_POST['jf_load_time'] ?? '';
-        [$token_ok, $token_error] = $spam->verify_token($token, $load_time);
+        $recipient = trim($this->post_string('jf-recipient'));
 
-        if (!$token_ok) {
-            wp_send_json_error(['message' => $token_error]);
-        }
-
-        if (!$spam->check_honeypot($_POST['jf-website'] ?? '')) {
+        if (!$spam->check_honeypot($this->post_string('jf-website'))) {
             wp_send_json_error(['message' => 'Обнаружен спам']);
         }
 
-        $name      = trim(wp_strip_all_tags($_POST['jf-name'] ?? ''));
-        $contact   = trim(wp_strip_all_tags($_POST['jf-contact'] ?? ''));
-        $message   = trim(wp_strip_all_tags($_POST['jf-message'] ?? ''));
-        $consent   = $_POST['jf-consent'] ?? '';
-        $recipient = trim($_POST['jf-recipient'] ?? '');
+        $name    = trim(wp_strip_all_tags($this->post_string('jf-name')));
+        $contact = trim(wp_strip_all_tags($this->post_string('jf-contact')));
+        $message = trim(wp_strip_all_tags($this->post_string('jf-message')));
+        $consent = $this->post_string('jf-consent');
 
         $errors = [];
 
-        if (mb_strlen($name) < 2) {
+        if ($name !== '' && mb_strlen($name) < 2) {
             $errors[] = 'Имя должно содержать минимум 2 символа';
         }
 
@@ -54,19 +47,30 @@ class Handler
             $errors[] = 'Необходимо дать согласие на обработку персональных данных';
         }
 
-        if ($recipient !== '' && !is_email($recipient)) {
-            $recipient = get_option('admin_email');
-        } elseif ($recipient === '') {
-            $recipient = get_option('admin_email');
+        if (!is_email($recipient)) {
+            wp_send_json_error(['message' => 'Не удалось определить адрес получателя. Обновите страницу.']);
         }
 
         if (!empty($errors)) {
-            wp_send_json_error(['message' => implode('<br>', $errors)]);
+            wp_send_json_error(['message' => implode('. ', $errors)]);
+        }
+
+        $token     = $this->post_string('jf-token');
+        $load_time = $this->post_string('jf_load_time');
+        [$token_ok, $token_error] = $spam->verify_token($token, $load_time, $recipient);
+
+        if (!$token_ok) {
+            wp_send_json_error(['message' => $token_error]);
+        }
+
+        $ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : '';
+        if (!$spam->check_rate_limit($ip)) {
+            wp_send_json_error(['message' => 'Слишком много отправок. Попробуйте через 10 минут.']);
         }
 
         $subject = 'Новое сообщение с сайта ' . get_bloginfo('name');
 
-        $mail_name    = esc_html($name);
+        $mail_name    = esc_html($name !== '' ? $name : 'Не указано');
         $mail_contact = esc_html($contact);
 
         $email_body = "
@@ -97,5 +101,11 @@ class Handler
         } else {
             wp_send_json_error(['message' => 'Ошибка отправки. Попробуйте позже или свяжитесь с нами по телефону.']);
         }
+    }
+
+    private function post_string(string $key): string
+    {
+        $value = $_POST[$key] ?? '';
+        return is_string($value) ? wp_unslash($value) : '';
     }
 }

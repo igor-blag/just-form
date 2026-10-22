@@ -31,7 +31,7 @@
                     el('div', { className: 'jf-block-preview-icon' }, '✉'),
                     el('h3', null, __('Форма обратной связи', 'just-form')),
                     el('p', { className: 'jf-block-fields' },
-                        __('Имя · Контакты · Сообщение', 'just-form')
+                        __('Имя (необязательно) · Контакт · Сообщение', 'just-form')
                     ),
                     el('span', { className: 'jf-block-btn-preview' },
                         attrs.buttonText || 'Отправить'
